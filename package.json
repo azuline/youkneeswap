@@ -1,0 +1,11 @@
+{
+  "name": "toy-amm",
+  "description": "A toy AMM for fun and oh god i hope 0 profit",
+  "version": "0.0.1a0",
+  "repository": "git@github.com:azuline/toy-amm.git",
+  "author": "blissful <blissful@sunsetglow.net>",
+  "license": "Apache-2.0",
+  "files": [
+    "contracts"
+  ]
+}
