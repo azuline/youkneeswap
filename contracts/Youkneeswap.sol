@@ -5,18 +5,16 @@ import "./interfaces/IERC20.sol";
 import "./libraries/Math.sol";
 
 // This probably has a bunch of random vulnerabilities in we handle exceptional
-// cases. I speedran the Solidity docs in a few hours, so I don't know anything
-// intimately.
+// cases. I speedran the Solidity docs in a few hours, so I don't know
+// anything.
 //
 // Please don't use this.
 
 // Notes:
 //
 // - We don't have a factory because we are creating these by hand.
-// - We don't have a fee because profit is for lowers.
-// - We don't have a governance token because anarchy is best.
-// - We don't have an approval system.
-// - We trade gas for clarity.
+// - We don't have a fee because profit is for losers.
+// - We don't have a governance token because anarchy rocks.
 // - But we do have a function to give me all the money.
 contract YoukneeswapVFinalDocx {
     // Administrator can do stuff to this contract, like steal all the money.
@@ -36,9 +34,7 @@ contract YoukneeswapVFinalDocx {
     }
 
     // I receive ETH and the other token. You receive entry into my mapping.
-    function addLiquidity(
-        uint256 otherTokenAmount
-    ) external payable {
+    function addLiquidity(uint256 otherTokenAmount) external payable {
         // First let's make sure we can steal that number of tokens from the
         // sender.
         // TODO: Is this a reentrancy vulnerability? I guess we trust that
@@ -76,9 +72,7 @@ contract YoukneeswapVFinalDocx {
     }
 
     // I receive entry into my mapping. You receive ETH.
-    function removeLiquidityEth(
-        uint256 numShares
-    ) external {
+    function removeLiquidityEth(uint256 numShares) external {
         // Verify that we can do this.
         uint256 sharesBalance = shares[msg.sender];
         require(numShares >= sharesBalance, "balance too low");
@@ -93,9 +87,7 @@ contract YoukneeswapVFinalDocx {
     }
 
     // I receive entry into my mapping. You receive other token.
-    function removeLiquidityOtherToken(
-        uint256 numShares
-    ) external {
+    function removeLiquidityOtherToken(uint256 numShares) external {
         // Verify that we can do this.
         uint256 sharesBalance = shares[msg.sender];
         require(numShares >= sharesBalance, "balance too low");
