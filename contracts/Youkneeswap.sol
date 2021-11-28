@@ -16,7 +16,7 @@ import "./libraries/Math.sol";
 // - We don't have a fee because profit is for losers.
 // - We don't have a governance token because anarchy rocks.
 // - But we do have a function to give me all the money.
-contract YoukneeswapVFinalDocx {
+contract Youkneeswap {
     // Administrator can do stuff to this contract, like steal all the money.
     address public immutable administrator;
 
