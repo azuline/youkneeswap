@@ -80,8 +80,11 @@ contract Youkneeswap {
         // Calculate how much eth we need to transfer.
         uint ethToSend = (numShares * address(this).balance) / totalShareSupply;
 
-        // Execute the transfers.
+        // Unmint shares.
         shares[msg.sender] -= numShares;
+        totalShareSupply -= numShares;
+
+        // Execute the transfers.
         bool success = payable(msg.sender).send(ethToSend);
         require(success, "eth transfer failed");
     }
