@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  lint:
+  solhint:
     name: Solhint
     runs-on: ubuntu-latest
     steps:
@@ -23,6 +23,7 @@ jobs:
         run: yarn install
       - name: Run Solhint
         run: yarn lint
+  slither:
     name: Slither
     runs-on: ubuntu-latest
     steps:
