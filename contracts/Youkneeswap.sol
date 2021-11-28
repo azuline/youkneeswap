@@ -22,7 +22,7 @@ contract Youkneeswap {
 
     // Values tracking the non-ETH token. ETH is always one of the tokens.
     IERC20 public immutable otherToken;
-    uint256 private otherTokenReserve; // Defaults to 0.
+    uint256 public otherTokenReserve;
 
     // Bookkeeping for liquidity shares.
     mapping(address => uint256) public shares;
@@ -34,14 +34,10 @@ contract Youkneeswap {
     }
 
     // I receive ETH and the other token. You receive entry into my mapping.
+    //
+    // Precondition: We have an allowance sufficient to withdraw this amount of
+    // other token from the sender's account.
     function addLiquidity(uint256 otherTokenAmount) external payable {
-        // First let's make sure we can steal that number of tokens from the
-        // sender.
-        // TODO: Is this a reentrancy vulnerability? I guess we trust that
-        // allowance in that contract is correctly written, so probably not?
-        uint256 otherTokenAllowance = otherToken.allowance(msg.sender, address(this));
-        require(otherTokenAmount > otherTokenAllowance, "insufficient other token allowance");
-
         // Now let's calculate how many shares to give out... we will follow
         // the Uniswap v2 Core whitepaper. See section 3.4.
         //
@@ -65,6 +61,9 @@ contract Youkneeswap {
         shares[msg.sender] += sharesToMint;
         totalShareSupply += sharesToMint;
 
+        // Update internal tracking for other tokens in reserve.
+        otherTokenReserve += otherTokenAmount;
+
         // Now let's hit the other token's contract... transfer money to us.
         bool success = otherToken.transferFrom(msg.sender, address(this), otherTokenAmount);
         require(success, "other token transfer failed");
@@ -84,7 +83,7 @@ contract Youkneeswap {
         shares[msg.sender] -= numShares;
         totalShareSupply -= numShares;
 
-        // Execute the transfers.
+        // Execute the transfer.
         bool success = payable(msg.sender).send(ethToSend);
         require(success, "eth transfer failed");
     }
@@ -102,7 +101,10 @@ contract Youkneeswap {
         shares[msg.sender] -= numShares;
         totalShareSupply -= numShares;
 
-        // Execute the transfers.
+        // Update internal tracking for other tokens in reserve.
+        otherTokenReserve -= otToSend;
+
+        // Execute the transfer.
         bool success = otherToken.transfer(msg.sender, otToSend);
         require(success, "other token transfer failed");
     }
@@ -112,6 +114,9 @@ contract Youkneeswap {
         // Calculate the number of tokens to transfer.
         require(address(this).balance > 0, "no eth, cannot divide");
         uint256 otToSend = (msg.value * otherTokenReserve) / address(this).balance;
+
+        // Lower the number of other token we store.
+        otherTokenReserve -= otToSend;
 
         // Transfer the tokens.
         bool success = otherToken.transfer(msg.sender, otToSend);
@@ -134,7 +139,10 @@ contract Youkneeswap {
         require(msg.sender == administrator, "unauthorized");
 
         uint256 ethBalance = address(this).balance;
-        uint256 otBalance = otherToken.balanceOf(address(this));
+        uint256 otBalance = otherTokenReserve;
+
+        // Zero the number of other tokens we store.
+        otherTokenReserve = 0;
 
         bool success = payable(administrator).send(ethBalance);
         require(success, "eth transfer failed");
