@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity =0.8.4;
+pragma solidity =0.7.6;
 
 interface IERC20 {
     function balanceOf(address owner) external view returns (uint);

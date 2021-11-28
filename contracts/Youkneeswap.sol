@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity =0.8.4;
+pragma solidity =0.7.6;
 
 import "./interfaces/IERC20.sol";
 import "./libraries/Math.sol";
@@ -46,7 +46,7 @@ contract Youkneeswap {
         // you care about your testnet monies.
         uint256 sharesToMint = 0;
         if (totalShareSupply == 0) {
-            require(msg.value * otherTokenAmount != 0, "initial min must have both tokens");
+            require(msg.value * otherTokenAmount != 0, "must have both tokens");
             sharesToMint = Math.sqrt(msg.value * otherTokenAmount);
         } else {
             // TODO: Should we use the starting balance to calculate or the new balance?
@@ -84,6 +84,7 @@ contract Youkneeswap {
         totalShareSupply -= numShares;
 
         // Execute the transfer.
+        // solhint-disable-next-line check-send-result
         bool success = payable(msg.sender).send(ethToSend);
         require(success, "eth transfer failed");
     }
@@ -130,6 +131,7 @@ contract Youkneeswap {
         uint256 ethToSend = (amount * address(this).balance) / otherTokenReserve;
 
         // Send the eth.
+        // solhint-disable-next-line check-send-result
         bool success = payable(msg.sender).send(ethToSend);
         require(success, "eth transfer failed");
     }
@@ -144,6 +146,7 @@ contract Youkneeswap {
         // Zero the number of other tokens we store.
         otherTokenReserve = 0;
 
+        // solhint-disable-next-line check-send-result
         bool success = payable(administrator).send(ethBalance);
         require(success, "eth transfer failed");
         success = otherToken.transfer(administrator, otBalance);
