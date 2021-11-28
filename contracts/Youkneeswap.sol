@@ -2,6 +2,7 @@
 pragma solidity =0.8.4;
 
 import "./interfaces/IERC20.sol";
+import "./libraries/Math.sol";
 
 // This probably has a bunch of random vulnerabilities in we handle exceptional
 // cases. I speedran the Solidity docs in a few hours, so I don't know anything
@@ -27,7 +28,7 @@ contract YoukneeswapVFinalDocx {
 
     // Bookkeeping for liquidity shares.
     mapping(address => uint256) public shares;
-    uint256 public numShares;
+    uint256 public totalShareSupply;
 
     constructor(address _otherToken) {
         otherToken = IERC20(_otherToken);
@@ -40,24 +41,23 @@ contract YoukneeswapVFinalDocx {
     ) external payable {
         // First let's make sure we can steal that number of tokens from the
         // sender.
+        // TODO: Is this a reentrancy vulnerability? I guess we trust that
+        // allowance in that contract is correctly written, so probably not?
         uint256 otherTokenAllowance = otherToken.allowance(msg.sender, address(this));
         require(otherTokenAmount > otherTokenAllowance, "insufficient other token allowance");
 
         // Now let's calculate how many shares to give out... we will follow
         // the Uniswap v2 Core whitepaper. See section 3.4.
         //
-        // I think Uniswap chooses to add liquidity such that both currencies
-        // result in the same number of shares to be allocated. This simplifies
-        // the security model. But I'm a lazy shit so I will allocate shares
-        // for each currency, despite the likely risk that this introduces an
-        // exploit.
+        // We do not adjust both amounts to match the optimal ratio. This means
+        // that you may be scammed when adding liquidity. Sorry! Submit a PR if
+        // you care about your testnet monies.
         uint256 sharesToMint = 0;
-        if (numShares == 0) {
-            // TODO: sqrt(msg.value * otherTokenAmount);
-            // I think I need to switch to a different number library; might steal ffffff
-            sharesToMint = 0;
+        if (totalShareSupply == 0) {
+            require(msg.value * otherTokenAmount != 0, "initial min must have both tokens");
+            sharesToMint = Math.sqrt(msg.value * otherTokenAmount);
         } else {
-            uint ethStartingBalance = address(this).balance - msg.value;
+            uint256 ethStartingBalance = address(this).balance - msg.value;
             // Add shares from eth contributions.
             sharesToMint += (msg.value * otherTokenReserve) / ethStartingBalance;
             // Add shares from other token contributions.
@@ -66,17 +66,46 @@ contract YoukneeswapVFinalDocx {
 
         // Mint the shares.
         shares[msg.sender] += sharesToMint;
-        numShares += sharesToMint;
+        totalShareSupply += sharesToMint;
 
         // Now let's hit the other token's contract... transfer money to us.
-        otherToken.transferFrom(msg.sender, address(this), otherTokenAmount);
-        // Eth already transferred to us natively via `msg.value`.
+        bool success = otherToken.transferFrom(msg.sender, address(this), otherTokenAmount);
+        require(success, "other token transfer failed");
+        // Eth already transferred to us natively via `msg.value`. So we are done.
     }
 
-    function removeLiquidity(
-        uint256 liquidity
+    // I receive entry into my mapping. You receive ETH.
+    function removeLiquidityEth(
+        uint256 numShares
     ) external {
-        // TODO
+        // Verify that we can do this.
+        uint256 sharesBalance = shares[msg.sender];
+        require(numShares >= sharesBalance, "balance too low");
+
+        // Calculate how much eth we need to transfer.
+        uint ethToSend = (numShares * address(this).balance) / totalShareSupply;
+
+        // Execute the transfers.
+        shares[msg.sender] -= numShares;
+        bool success = payable(msg.sender).send(ethToSend);
+        require(success, "eth transfer failed");
+    }
+
+    // I receive entry into my mapping. You receive other token.
+    function removeLiquidityOtherToken(
+        uint256 numShares
+    ) external {
+        // Verify that we can do this.
+        uint256 sharesBalance = shares[msg.sender];
+        require(numShares >= sharesBalance, "balance too low");
+
+        // Calculate how much other token we need to transfer.
+        uint otToSend = (numShares * otherTokenReserve) / totalShareSupply;
+
+        // Execute the transfers.
+        shares[msg.sender] -= numShares;
+        bool success = otherToken.transfer(msg.sender, otToSend);
+        require(success, "other token transfer failed");
     }
 
     function swapEthToToken(
