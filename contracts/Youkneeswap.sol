@@ -57,6 +57,7 @@ contract YoukneeswapVFinalDocx {
             require(msg.value * otherTokenAmount != 0, "initial min must have both tokens");
             sharesToMint = Math.sqrt(msg.value * otherTokenAmount);
         } else {
+            // TODO: Should we use the starting balance to calculate or the new balance?
             uint256 ethStartingBalance = address(this).balance - msg.value;
             // Add shares from eth contributions.
             sharesToMint += (msg.value * otherTokenReserve) / ethStartingBalance;
@@ -102,22 +103,33 @@ contract YoukneeswapVFinalDocx {
         // Calculate how much other token we need to transfer.
         uint otToSend = (numShares * otherTokenReserve) / totalShareSupply;
 
-        // Execute the transfers.
+        // Unmint shares.
         shares[msg.sender] -= numShares;
+        totalShareSupply -= numShares;
+
+        // Execute the transfers.
         bool success = otherToken.transfer(msg.sender, otToSend);
         require(success, "other token transfer failed");
     }
 
-    function swapEthToToken(
-        uint256 amount
-    ) external payable {
-        // TODO
+    function swapEthToToken() external payable {
+        // Calculate the number of tokens to transfer.
+        require(address(this).balance > 0, "no eth, cannot divide");
+        uint256 otToSend = (msg.value * otherTokenReserve) / address(this).balance;
+
+        // Transfer the tokens.
+        bool success = otherToken.transfer(msg.sender, otToSend);
+        require(success, "other token transfer failed");
     }
 
-    function swapTokenToEth(
-        uint256 amount
-    ) external {
-        // TODO
+    function swapTokenToEth(uint256 amount) external {
+        // Calculate the number of eth to send.
+        require(otherTokenReserve > 0, "no other token, cannot divide");
+        uint256 ethToSend = (amount * address(this).balance) / otherTokenReserve;
+
+        // Send the eth.
+        bool success = payable(msg.sender).send(ethToSend);
+        require(success, "eth transfer failed");
     }
 
     // The most important function in this contract. Gives all the money to me.
