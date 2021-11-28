@@ -112,7 +112,8 @@ contract YoukneeswapVFinalDocx {
         require(success, "other token transfer failed");
     }
 
-    function swapEthToToken() external payable {
+    // I receive ETH. You receive other token.
+    function swapEthToOtherToken() external payable {
         // Calculate the number of tokens to transfer.
         require(address(this).balance > 0, "no eth, cannot divide");
         uint256 otToSend = (msg.value * otherTokenReserve) / address(this).balance;
@@ -122,7 +123,8 @@ contract YoukneeswapVFinalDocx {
         require(success, "other token transfer failed");
     }
 
-    function swapTokenToEth(uint256 amount) external {
+    // I receive other token. You receive ETH.
+    function swapOtherTokenToEth(uint256 amount) external {
         // Calculate the number of eth to send.
         require(otherTokenReserve > 0, "no other token, cannot divide");
         uint256 ethToSend = (amount * address(this).balance) / otherTokenReserve;
