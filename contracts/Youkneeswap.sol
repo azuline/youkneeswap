@@ -37,7 +37,7 @@ contract Youkneeswap {
     //
     // Precondition: We have an allowance sufficient to withdraw this amount of
     // other token from the sender's account.
-    function addLiquidity(uint256 otherTokenAmount) external payable {
+    function addLiquidity(uint256 _otherTokenAmount) external payable {
         // Now let's calculate how many shares to give out... we will follow
         // the Uniswap v2 Core whitepaper. See section 3.4.
         //
@@ -46,15 +46,15 @@ contract Youkneeswap {
         // you care about your testnet monies.
         uint256 sharesToMint = 0;
         if (totalShareSupply == 0) {
-            require(msg.value * otherTokenAmount != 0, "must have both tokens");
-            sharesToMint = Math.sqrt(msg.value * otherTokenAmount);
+            require(msg.value * _otherTokenAmount != 0, "must have both tokens");
+            sharesToMint = Math.sqrt(msg.value * _otherTokenAmount);
         } else {
             // TODO: Should we use the starting balance to calculate or the new balance?
             uint256 ethStartingBalance = address(this).balance - msg.value;
             // Add shares from eth contributions.
-            sharesToMint += (msg.value * otherTokenReserve) / ethStartingBalance;
+            sharesToMint += (msg.value * totalShareSupply) / ethStartingBalance;
             // Add shares from other token contributions.
-            sharesToMint += (otherTokenAmount * ethStartingBalance) / otherTokenReserve;
+            sharesToMint += (_otherTokenAmount * totalShareSupply) / otherTokenReserve;
         }
 
         // Mint the shares.
@@ -62,26 +62,26 @@ contract Youkneeswap {
         totalShareSupply += sharesToMint;
 
         // Update internal tracking for other tokens in reserve.
-        otherTokenReserve += otherTokenAmount;
+        otherTokenReserve += _otherTokenAmount;
 
         // Now let's hit the other token's contract... transfer money to us.
-        bool success = otherToken.transferFrom(msg.sender, address(this), otherTokenAmount);
+        bool success = otherToken.transferFrom(msg.sender, address(this), _otherTokenAmount);
         require(success, "other token transfer failed");
         // Eth already transferred to us natively via `msg.value`. So we are done.
     }
 
     // I receive entry into my mapping. You receive ETH.
-    function removeLiquidityEth(uint256 numShares) external {
+    function removeLiquidityEth(uint256 _numShares) external {
         // Verify that we can do this.
         uint256 sharesBalance = shares[msg.sender];
-        require(numShares >= sharesBalance, "balance too low");
+        require(_numShares <= sharesBalance, "balance too low");
 
         // Calculate how much eth we need to transfer.
-        uint ethToSend = (numShares * address(this).balance) / totalShareSupply;
+        uint ethToSend = (_numShares * address(this).balance) / totalShareSupply;
 
         // Unmint shares.
-        shares[msg.sender] -= numShares;
-        totalShareSupply -= numShares;
+        shares[msg.sender] -= _numShares;
+        totalShareSupply -= _numShares;
 
         // Execute the transfer.
         // solhint-disable-next-line check-send-result
@@ -90,17 +90,17 @@ contract Youkneeswap {
     }
 
     // I receive entry into my mapping. You receive other token.
-    function removeLiquidityOtherToken(uint256 numShares) external {
+    function removeLiquidityOtherToken(uint256 _numShares) external {
         // Verify that we can do this.
         uint256 sharesBalance = shares[msg.sender];
-        require(numShares >= sharesBalance, "balance too low");
+        require(_numShares <= sharesBalance, "balance too low");
 
         // Calculate how much other token we need to transfer.
-        uint otToSend = (numShares * otherTokenReserve) / totalShareSupply;
+        uint otToSend = (_numShares * otherTokenReserve) / totalShareSupply;
 
         // Unmint shares.
-        shares[msg.sender] -= numShares;
-        totalShareSupply -= numShares;
+        shares[msg.sender] -= _numShares;
+        totalShareSupply -= _numShares;
 
         // Update internal tracking for other tokens in reserve.
         otherTokenReserve -= otToSend;
